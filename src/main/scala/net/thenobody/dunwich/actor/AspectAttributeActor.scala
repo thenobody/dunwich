@@ -1,8 +1,10 @@
 package net.thenobody.dunwich.actor
 
 import akka.actor.{Props, Actor}
+import net.thenobody.dunwich.model.UserEvent
 
 import scala.collection.mutable
+import scala.collection.immutable
 import scala.util.hashing.MurmurHash3
 
 /**
@@ -17,6 +19,10 @@ class AspectAttributeActor extends Actor {
     case CardinalityRequest(accuracy) =>
       val cardinality = estimateCardinality(accuracy)
       sender() ! CardinalityResponse(cardinality.toInt, accuracy)
+
+    case SampleRequest(accuracy) =>
+      val sample = getSample(accuracy)
+      sender() ! SampleResponse(sample, accuracy)
   }
 
   def addUser(uuid: String): Unit = userSet += getUserHash(uuid)
@@ -26,11 +32,14 @@ class AspectAttributeActor extends Actor {
     case h => 0.5F + 0.5F * (h / Int.MaxValue.toFloat)
   }
 
+  def getSample(accuracy: Float): immutable.SortedSet[Float] = immutable.SortedSet(
+    userSet.take(getKByAccuracy(accuracy)).iterator.toList: _*
+  )
+
   def getKByAccuracy(accuracy: Float): Int = math.round(1 / math.pow(1.0 - accuracy, 2) + 2).toInt
 
   def estimateCardinality(accuracy: Float): Float = {
-    val k = getKByAccuracy(accuracy)
-    val sample = userSet.take(k)
+    val sample = getSample(accuracy)
     sample.size / sample.max
   }
 }
@@ -41,3 +50,6 @@ object AspectAttributeActor {
 
 case class CardinalityRequest(accuracy: Float)
 case class CardinalityResponse(cardinality: Int, accuracy: Float)
+
+case class SampleRequest(accuracy: Float)
+case class SampleResponse(sample: immutable.SortedSet[Float], accuracy: Float)

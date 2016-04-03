@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
+import net.thenobody.dunwich.model.UserEvent
 import net.thenobody.dunwich.util.UUIDUtil
 import org.scalatest.{Matchers, FlatSpecLike}
 
@@ -23,7 +24,7 @@ class AspectAttributeActorSpec extends TestKit(ActorSystem()) with ImplicitSende
 
     val count = 100000
     (1 to count).foreach { seed =>
-      instance ! UserEvent(UUIDUtil.seededUUID(seed), timestamp, aspect, aspect, aspect, aspect)
+      instance ! new UserEvent(UUIDUtil.seededUUID(seed), timestamp, aspect, aspect, aspect, aspect)
     }
 
     instance ! CardinalityRequest(0.90F)

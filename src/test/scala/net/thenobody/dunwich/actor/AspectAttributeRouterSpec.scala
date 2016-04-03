@@ -2,6 +2,7 @@ package net.thenobody.dunwich.actor
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}
+import net.thenobody.dunwich.model._
 import net.thenobody.dunwich.util.UUIDUtil
 import org.scalatest.{FlatSpecLike, Matchers}
 
@@ -24,11 +25,11 @@ class AspectAttributeRouterSpec extends TestKit(ActorSystem()) with ImplicitSend
     val count2 = 50000
     val count3 = 75000
 
-    val aspectAttribute1 = 1
-    val aspectAttribute2 = 2
-    val aspectAttribute3 = 3
+    val aspectAttribute1 = Aspect1(1)
+    val aspectAttribute2 = Aspect2(2)
+    val aspectAttribute3 = Aspect3(3)
 
-    val aspectAttributeNoData = 9
+    val aspectAttributeNoData = Aspect4(9)
 
     (1 to count1).foreach { seed =>
       instance ! buildUserEventWitAttribute(aspectAttribute1, UUIDUtil.seededUUID(seed), timestamp, aspectPlaceholder)
@@ -66,8 +67,8 @@ class AspectAttributeRouterSpec extends TestKit(ActorSystem()) with ImplicitSend
     response4 shouldBe a [NoDataResponse]
   }
 
-  def buildUserEventWitAttribute(attribute: Int, uuid: String, timestamp: Long, aspectPlaceholder: Int): (Int, UserEvent) = {
-    (attribute, UserEvent(uuid, timestamp, aspectPlaceholder, aspectPlaceholder, aspectPlaceholder, aspectPlaceholder))
+  def buildUserEventWitAttribute(aspect: Aspect, uuid: String, timestamp: Long, aspectPlaceholder: Int): (Aspect, UserEvent) = {
+    (aspect, new UserEvent(uuid, timestamp, aspectPlaceholder, aspectPlaceholder, aspectPlaceholder, aspectPlaceholder))
   }
 
 }

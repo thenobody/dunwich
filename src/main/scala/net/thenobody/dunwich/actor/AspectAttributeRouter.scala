@@ -22,7 +22,7 @@ class AspectAttributeRouter extends Actor {
         case None => sender() ! NoDataResponse(aspect)
       }
 
-    case (aspect: Aspect, request: SampleRequest) =>
+    case (aspect: Aspect, request: SketchRequest) =>
       aspectAttributes.get(aspect) match {
         case Some(actor) => actor.forward(request)
         case None => sender() ! NoDataResponse(aspect)

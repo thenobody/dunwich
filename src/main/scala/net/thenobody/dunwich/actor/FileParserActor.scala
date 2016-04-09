@@ -14,7 +14,7 @@ class FileParserActor extends Actor {
   def receive = {
     case FileInputMessage(file, funnel) =>
       println(s"started loading from $file")
-      Source.fromFile(file).getLines().foreach(CsvUtil.parseCsv(_, '\t') match {
+      Source.fromFile(file).getLines().foreach(_.split('\t').toList match {
         case uuid +: timestamp +: aspect1 +: aspect2 +: aspect3 +: aspect4 +: Nil =>
           funnel ! UserEvent(uuid, timestamp, aspect1, aspect2, aspect3, aspect4)
       })

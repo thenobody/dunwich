@@ -1,6 +1,6 @@
 package net.thenobody.dunwich
 
-import scala.collection.mutable
+import scala.collection.{GenTraversableOnce, mutable}
 import scala.util.hashing.MurmurHash3
 
 /**
@@ -40,20 +40,58 @@ package object model {
   case class AndQuery(terms: Seq[Query]) extends Query
   case class OrQuery(terms: Seq[Query]) extends Query
 
+  class BoundedSketch(val k: Int, val hashes: SketchHashes) {
+    val membership = mutable.HashSet(hashes.toList: _*)
+
+    import Sketch._
+
+    def this(k: Int) = this(k, mutable.TreeSet[Float]())
+
+    def theta: Float = if (hashes.isEmpty) 1.0F
+      else hashes.max
+
+    var _theta: Float = theta
+    def addUser(uuid: String): Unit = {
+      val hash = getHash(uuid)
+      if (hashes.size < k) hashes += hash
+      else if (hash < _theta && !membership.contains(hash)) {
+        hashes += hash
+        membership += hash
+        val (newTheta, oldTheta) = hashes.takeRight(2).toList match { case nt +: ot+: Nil => (nt, ot)}
+        hashes -= oldTheta
+        membership -= oldTheta
+        _theta = newTheta
+      }
+    }
+
+    def cardinality: Int = math.round(hashes.size / theta)
+
+    def mean: Double = average(hashes.map(_.toDouble))
+
+    def variance: Double = {
+      val meanValue = mean
+      average(hashes.map { hash => math.pow(meanValue - hash, 2) })
+    }
+
+    def union(sketch: BoundedSketch): BoundedSketch = setOp(sketch) (_ union _)
+
+    def intersect(sketch: BoundedSketch): BoundedSketch = setOp(sketch) (_ intersect _)
+
+    def setOp(sketch: BoundedSketch)(op: (SketchHashes, SketchHashes) => SketchHashes): BoundedSketch = {
+      val newTheta = math.min(theta, sketch.theta)
+      val newHashes = op(hashes, sketch.hashes).until(newTheta)
+      new BoundedSketch(k, newHashes)
+    }
+  }
+
   case class Sketch(hashes: SketchHashes) {
+    import Sketch._
     val _hashes = mutable.SortedSet(hashes.toList: _*)
 
     def addUser(uuid: String): Unit = {
       val hash = getHash(uuid)
       _hashes.add(hash)
     }
-
-    def getHash(uuid: String): Float = MurmurHash3.stringHash(uuid) match {
-      case h if h < 0 => 0.5F - 0.5F * (h / Int.MinValue.toFloat)
-      case h => 0.5F + 0.5F * (h / Int.MaxValue.toFloat)
-    }
-
-    def k(accuracy: Float): Int = math.round(1 / math.pow(1.0 - accuracy, 2) + 2).toInt
 
     def cardinality(accuracy: Float): Int = {
       val sampleHashes = sample(accuracy)
@@ -74,10 +112,31 @@ package object model {
       new Sketch(newHashes)
     }
   }
+
   object Sketch {
     val MaxHashValue = 1f
+
+    def getHash(uuid: String): Float = MurmurHash3.stringHash(uuid) match {
+      case h if h < 0 => 0.5F - 0.5F * (h / Int.MinValue.toFloat)
+      case h => 0.5F + 0.5F * (h / Int.MaxValue.toFloat)
+    }
+
+    def k(accuracy: Float): Int = math.round(1 / math.pow(1.0 - accuracy, 2) + 2).toInt
+
+    val average = PartialFunction {
+      iterable: GenTraversableOnce[Double] =>
+        iterable.foldLeft((0, 0.0)) { case ((count, sum), hash) => (count + 1, hash + sum) }
+    } andThen { case (count, sum) => sum / count }
   }
+
   object EmptySketch {
     def apply(): Sketch = new Sketch(mutable.SortedSet[Float]())
+  }
+
+  object BoundedSketch {
+    val DefaultAccuracy = 0.95F
+
+    def apply(): BoundedSketch = BoundedSketch(DefaultAccuracy)
+    def apply(accuracy: Float): BoundedSketch = new BoundedSketch(Sketch.k(accuracy))
   }
 }

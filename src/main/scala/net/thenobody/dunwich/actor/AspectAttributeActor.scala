@@ -1,17 +1,13 @@
 package net.thenobody.dunwich.actor
 
-import akka.actor.{Props, Actor}
-import net.thenobody.dunwich.model.{EmptySketch, Sketch, UserEvent}
-
-import scala.collection.mutable
-import scala.collection.immutable
-import scala.util.hashing.MurmurHash3
+import akka.actor.{Actor, Props}
+import net.thenobody.dunwich.model.{BoundedSketch, UserEvent}
 
 /**
  * Created by antonvanco on 27/03/2016.
  */
 class AspectAttributeActor extends Actor {
-  val userSketch: Sketch = EmptySketch()
+  val userSketch: BoundedSketch = BoundedSketch()
 
   override def receive = {
     case UserEvent(uuid, _, _, _, _, _) =>
@@ -19,11 +15,11 @@ class AspectAttributeActor extends Actor {
       sender() ! UserEventSketched
 
     case CardinalityRequest(accuracy) =>
-      val cardinality = userSketch.cardinality(accuracy)
+      val cardinality = userSketch.cardinality
       sender() ! CardinalityResponse(cardinality, accuracy)
 
     case SketchRequest(accuracy) =>
-      sender() ! SketchResponse(userSketch.sampled(accuracy))
+      sender() ! SketchResponse(userSketch)
   }
 }
 
@@ -37,4 +33,4 @@ case class CardinalityRequest(accuracy: Float)
 case class CardinalityResponse(cardinality: Int, accuracy: Float)
 
 case class SketchRequest(accuracy: Float)
-case class SketchResponse(sketch: Sketch)
+case class SketchResponse(sketch: BoundedSketch)

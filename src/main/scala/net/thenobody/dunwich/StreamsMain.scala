@@ -89,7 +89,11 @@ object StreamsMain {
           }
           sketchQueryActor ? (accuracy -> query) onSuccess {
             case SketchResponse(sketch) =>
-              println(s"cardinality: ${sketch.cardinality(accuracy)}")
+              println(s"cardinality: ${sketch.cardinality}")
+              println(s"variance: ${sketch.variance}")
+              println(s"mean: ${sketch.mean}")
+              println(s"min hash: ${sketch.hashes.min}")
+              println(s"max hash: ${sketch.hashes.max}")
           }
         }
       }

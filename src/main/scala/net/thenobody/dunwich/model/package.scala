@@ -20,6 +20,11 @@ package object model {
       aspect3: String,
       aspect4: String
     ): UserEvent = new UserEvent(uuid, timestamp.toLong, aspect1.toInt, aspect2.toInt, aspect3.toInt, aspect4.toInt)
+
+    def apply(parts: List[String]): UserEvent = parts match {
+      case uuid +: timestamp +: aspect1 +: aspect2 +: aspect3 +: aspect4 +: Nil =>
+        UserEvent(uuid, timestamp, aspect1, aspect2, aspect3, aspect4)
+    }
   }
 
   trait Aspect {
@@ -35,17 +40,12 @@ package object model {
   case class AndQuery(terms: Seq[Query]) extends Query
   case class OrQuery(terms: Seq[Query]) extends Query
 
-  class Sketch(val theta: Float, hashes: SketchHashes) {
+  case class Sketch(hashes: SketchHashes) {
     val _hashes = mutable.SortedSet(hashes.toList: _*)
 
     def addUser(uuid: String): Unit = {
       val hash = getHash(uuid)
-      if (hash < theta) {
-        _hashes.add(hash)
-        if (_hashes.size > Sketch.K) {
-          _hashes -= _hashes.max
-        }
-      }
+      _hashes.add(hash)
     }
 
     def getHash(uuid: String): Float = MurmurHash3.stringHash(uuid) match {
@@ -53,24 +53,31 @@ package object model {
       case h => 0.5F + 0.5F * (h / Int.MaxValue.toFloat)
     }
 
-    def cardinality: Int = math.round(_hashes.size / theta)
+    def k(accuracy: Float): Int = math.round(1 / math.pow(1.0 - accuracy, 2) + 2).toInt
+
+    def cardinality(accuracy: Float): Int = {
+      val sampleHashes = sample(accuracy)
+      math.round(sampleHashes.size / sampleHashes.max)
+    }
+
+    private def sample(accuracy: Float): SketchHashes = _hashes.take(k(accuracy))
+
+    def sampled(accuracy: Float): Sketch = copy(hashes = sample(accuracy))
 
     def union(sketch: Sketch): Sketch = setOp(sketch) (_ union _)
 
     def intersect(sketch: Sketch): Sketch = setOp(sketch) (_ intersect _)
 
     def setOp(sketch: Sketch)(op: (SketchHashes, SketchHashes) => SketchHashes): Sketch = {
-      val newTheta = math.min(theta, sketch.theta)
+      val newTheta = math.min(_hashes.max, sketch._hashes.max)
       val newHashes = op(_hashes, sketch._hashes).until(newTheta)
-      new Sketch(newTheta, newHashes)
+      new Sketch(newHashes)
     }
   }
   object Sketch {
     val MaxHashValue = 1f
-    val K = 16384
-    def apply(hashes: SketchHashes): Sketch = new Sketch(hashes.max, hashes)
   }
   object EmptySketch {
-    def apply(): Sketch = new Sketch(Sketch.MaxHashValue, mutable.SortedSet[Float]())
+    def apply(): Sketch = new Sketch(mutable.SortedSet[Float]())
   }
 }

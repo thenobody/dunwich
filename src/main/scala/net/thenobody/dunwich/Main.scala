@@ -49,7 +49,7 @@ object Main {
         }
         sketchQueryActor ? (accuracy -> query) onSuccess {
           case SketchResponse(sketch) =>
-            println(s"cardinality: ${sketch.cardinality}")
+            println(s"cardinality: ${sketch.cardinality(accuracy)}")
         }
       }
     }

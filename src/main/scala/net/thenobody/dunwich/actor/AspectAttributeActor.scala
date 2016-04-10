@@ -11,24 +11,27 @@ import scala.util.hashing.MurmurHash3
  * Created by antonvanco on 27/03/2016.
  */
 class AspectAttributeActor extends Actor {
-  val userSet: Sketch = EmptySketch()
+  val userSketch: Sketch = EmptySketch()
 
   override def receive = {
     case UserEvent(uuid, _, _, _, _, _) =>
-      userSet.addUser(uuid)
+      userSketch.addUser(uuid)
+      sender() ! UserEventSketched
 
     case CardinalityRequest(accuracy) =>
-      val cardinality = userSet.cardinality
+      val cardinality = userSketch.cardinality(accuracy)
       sender() ! CardinalityResponse(cardinality, accuracy)
 
     case SketchRequest(accuracy) =>
-      sender() ! SketchResponse(userSet)
+      sender() ! SketchResponse(userSketch.sampled(accuracy))
   }
 }
 
 object AspectAttributeActor {
   def props(): Props = Props(classOf[AspectAttributeActor])
 }
+
+case object UserEventSketched
 
 case class CardinalityRequest(accuracy: Float)
 case class CardinalityResponse(cardinality: Int, accuracy: Float)

@@ -13,7 +13,7 @@ trait AspectExtractor extends Actor {
 
   def receive = {
     case userEvent: UserEvent =>
-      router ! extractAttribute(userEvent) -> userEvent
+      router.forward(extractAttribute(userEvent) -> userEvent)
   }
 }
 

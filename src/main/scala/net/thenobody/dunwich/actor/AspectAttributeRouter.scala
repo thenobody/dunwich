@@ -14,7 +14,8 @@ class AspectAttributeRouter extends Actor {
 
   def receive = {
     case (attribute: Aspect, userEvent: UserEvent) =>
-      aspectAttributes.getOrElseUpdate(attribute, context.actorOf(AspectAttributeActor.props())) ! userEvent
+      val attributeActor = aspectAttributes.getOrElseUpdate(attribute, context.actorOf(AspectAttributeActor.props()))
+      attributeActor.forward(userEvent)
 
     case (aspect: Aspect, request: CardinalityRequest) =>
       aspectAttributes.get(aspect) match {

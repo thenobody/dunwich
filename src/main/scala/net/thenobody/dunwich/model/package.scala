@@ -35,6 +35,15 @@ package object model {
   case class Aspect3(attribute: Int) extends Aspect
   case class Aspect4(attribute: Int) extends Aspect
 
+  object Aspect {
+    def apply(aspect: String, attribute: Int): Aspect = aspect match {
+      case "1" => Aspect1(attribute)
+      case "2" => Aspect2(attribute)
+      case "3" => Aspect3(attribute)
+      case "4" => Aspect4(attribute)
+    }
+  }
+
   trait Query
   case class AspectQuery(aspect: Aspect) extends Query
   case class AndQuery(terms: Seq[Query]) extends Query

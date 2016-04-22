@@ -21,15 +21,15 @@ class SketchQueryActor(aspectAttributeRouter: ActorRef) extends Actor {
   implicit val timeout = Timeout(3 seconds)
 
   override def receive = {
-    case (accuracy: Float, AspectQuery(aspect)) =>
-      aspectAttributeRouter ? (aspect -> SketchRequest(accuracy)) pipeTo sender()
+    case AspectQuery(aspect) =>
+      aspectAttributeRouter ? (aspect -> SketchRequest) pipeTo sender()
 
-    case (accuracy: Float, OrQuery(terms)) =>
-      val futures = terms.map { term => self ? (accuracy -> term) map { case SketchResponse(sketch) => sketch } }
+    case OrQuery(terms) =>
+      val futures = terms.map { term => self ? term map { case SketchResponse(sketch) => sketch } }
       Future.reduce(futures) (_ union _) map SketchResponse pipeTo sender()
 
-    case (accuracy: Float, AndQuery(terms)) =>
-      val futures = terms.map { term => self ? (accuracy -> term) map { case SketchResponse(sketch) => sketch } }
+    case AndQuery(terms) =>
+      val futures = terms.map { term => self ? term map { case SketchResponse(sketch) => sketch } }
       Future.reduce(futures) (_ intersect _) map SketchResponse pipeTo sender()
   }
 }

@@ -18,7 +18,7 @@ class AspectAttributeActor extends Actor {
       val cardinality = userSketch.cardinality
       sender() ! CardinalityResponse(cardinality, accuracy)
 
-    case SketchRequest(accuracy) =>
+    case SketchRequest =>
       sender() ! SketchResponse(userSketch)
   }
 }
@@ -32,5 +32,5 @@ case object UserEventSketched
 case class CardinalityRequest(accuracy: Float)
 case class CardinalityResponse(cardinality: Int, accuracy: Float)
 
-case class SketchRequest(accuracy: Float)
+case object SketchRequest
 case class SketchResponse(sketch: BoundedSketch)
